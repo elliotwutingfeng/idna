@@ -8,6 +8,14 @@ from .intranges import intranges_contain
 _virama_combining_class = 9
 _alabel_prefix = b'xn--'
 _unicode_dots_re = re.compile('[\u002e\u3002\uff0e\uff61]')
+_bidi_label_directions = set(['R', 'AL', 'AN'])
+_bidi_rule_1_directions = set(['R', 'AL'])
+_bidi_rule_2_directions = set(['R', 'AL', 'AN', 'EN', 'ES', 'CS', 'ET', 'ON', 'BN', 'NSM'])
+_bidi_rule_3_directions = set(['R', 'AL', 'EN', 'AN'])
+_bidi_rule_4_directions = set(['AN', 'EN'])
+_bidi_rule_5_directions = set(['L', 'EN', 'ES', 'CS', 'ET', 'ON', 'BN', 'NSM'])
+_bidi_rule_6_directions = set(['L', 'EN'])
+
 
 class IDNAError(UnicodeError):
     """ Base exception for all IDNA-encoding related problems """
@@ -66,14 +74,14 @@ def check_bidi(label: str, check_ltr: bool = False) -> bool:
         if direction == '':
             # String likely comes from a newer version of Unicode
             raise IDNABidiError('Unknown directionality in label {} at position {}'.format(repr(label), idx))
-        if direction in ['R', 'AL', 'AN']:
+        if direction in _bidi_label_directions:
             bidi_label = True
     if not bidi_label and not check_ltr:
         return True
 
     # Bidi rule 1
     direction = unicodedata.bidirectional(label[0])
-    if direction in ['R', 'AL']:
+    if direction in _bidi_rule_1_directions:
         rtl = True
     elif direction == 'L':
         rtl = False
@@ -87,15 +95,15 @@ def check_bidi(label: str, check_ltr: bool = False) -> bool:
 
         if rtl:
             # Bidi rule 2
-            if not direction in ['R', 'AL', 'AN', 'EN', 'ES', 'CS', 'ET', 'ON', 'BN', 'NSM']:
+            if direction not in _bidi_rule_2_directions:
                 raise IDNABidiError('Invalid direction for codepoint at position {} in a right-to-left label'.format(idx))
             # Bidi rule 3
-            if direction in ['R', 'AL', 'EN', 'AN']:
+            if direction in _bidi_rule_3_directions:
                 valid_ending = True
             elif direction != 'NSM':
                 valid_ending = False
             # Bidi rule 4
-            if direction in ['AN', 'EN']:
+            if direction in _bidi_rule_4_directions:
                 if not number_type:
                     number_type = direction
                 else:
@@ -103,10 +111,10 @@ def check_bidi(label: str, check_ltr: bool = False) -> bool:
                         raise IDNABidiError('Can not mix numeral types in a right-to-left label')
         else:
             # Bidi rule 5
-            if not direction in ['L', 'EN', 'ES', 'CS', 'ET', 'ON', 'BN', 'NSM']:
+            if direction not in _bidi_rule_5_directions:
                 raise IDNABidiError('Invalid direction for codepoint at position {} in a left-to-right label'.format(idx))
             # Bidi rule 6
-            if direction in ['L', 'EN']:
+            if direction in _bidi_rule_6_directions:
                 valid_ending = True
             elif direction != 'NSM':
                 valid_ending = False
